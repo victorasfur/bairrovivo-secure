@@ -1,0 +1,11 @@
+# Copie para terraform.tfvars (ele está no .gitignore) e preencha.
+subscription_id      = "00000000-0000-0000-0000-000000000000"
+location             = "brazilsouth"
+vm_size              = "Standard_B2s"
+admin_ssh_public_key = "ssh-ed25519 AAAA... voce@pc"
+admin_cidr           = "200.100.50.25/32"   # seu IP: https://ifconfig.me  (sempre /32)
+app_image            = "ghcr.io/SEU_USUARIO/SEU_REPO:latest"   # tudo em minúsculas
+repo_url             = "https://github.com/SEU_USUARIO/SEU_REPO.git"
+postgres_password    = "mude-esta-senha"
+metrics_token        = "troque-por-openssl-rand-hex-16"
+demo_mode            = "1"

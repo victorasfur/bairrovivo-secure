@@ -1,0 +1,113 @@
+name: ci-cd
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write   # necessário para publicar a imagem no GHCR
+
+jobs:
+  # 1) Qualidade: lint + testes
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: pytest -q
+
+  # 2) Segurança do código: segredos vazados + vulnerabilidades no código
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico completo: o Gitleaks varre todos os commits
+      - name: Gitleaks (segredos vazados)
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --verbose --redact --exit-code 1
+      - name: Semgrep (vulnerabilidades no código)
+        run: |
+          pip install semgrep
+          semgrep scan --config auto --error --quiet app
+
+  # 3) Build da imagem + Trivy + teste de subida com docker compose + publicação
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (local, para escanear antes de publicar)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: bairrovivo:ci
+          build-args: GIT_SHA=${{ github.sha }}
+      - name: Trivy (vulnerabilidades da imagem)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: bairrovivo:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Stack sobe com docker compose?
+        run: |
+          printf 'POSTGRES_PASSWORD=ci12345\nAPP_IMAGE=bairrovivo:ci\nAPP_PORT=8000\n' > .env
+          docker compose up -d --no-build --wait --wait-timeout 90
+          curl -fsS http://localhost:8000/health
+          docker compose down -v
+      - name: Login no GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publicar imagem
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag bairrovivo:ci "${{ steps.meta.outputs.image }}:latest"
+          docker tag bairrovivo:ci "${{ steps.meta.outputs.image }}:${{ github.sha }}"
+          docker push "${{ steps.meta.outputs.image }}:latest"
+          docker push "${{ steps.meta.outputs.image }}:${{ github.sha }}"
+
+  # 4) Deploy automático: a VM Azure puxa a imagem nova (pull a cada minuto, via cron criado
+  #    pelo Terraform). Este job espera a versão nova (SHA do commit) responder na URL pública.
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Aguardar a VM publicar a versão ${{ github.sha }}
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
+        run: |
+          if [ -z "$APP_URL" ]; then echo "APP_URL não definida (Settings > Variables). Pulando verificação."; exit 0; fi
+          for i in $(seq 1 30); do
+            if curl -fsS "$APP_URL/health" | grep -q "${{ github.sha }}"; then
+              echo "✅ Deploy concluído: versão nova no ar"
+              # /metrics sem token deve ser bloqueado; com token deve funcionar
+              test "$(curl -s -o /dev/null -w '%{http_code}' "$APP_URL/metrics")" = "401"
+              if [ -n "$METRICS_TOKEN" ]; then
+                curl -fsS -H "Authorization: Bearer $METRICS_TOKEN" "$APP_URL/metrics" >/dev/null
+              fi
+              exit 0
+            fi
+            echo "aguardando deploy... ($i/30)"; sleep 20
+          done
+          echo "❌ A versão nova não apareceu em 10 min"; exit 1

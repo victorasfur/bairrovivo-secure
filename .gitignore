@@ -1,0 +1,24 @@
+# Segredos e estado (NUNCA versionar)
+.env
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl.bak
+crash.log
+monitoring/metrics_token
+*.pem
+id_rsa*
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+.pytest_cache/
+.ruff_cache/

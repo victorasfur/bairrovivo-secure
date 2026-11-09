@@ -1,0 +1,38 @@
+# Prometheus + Grafana rodando NO SEU COMPUTADOR, apontando para o MVP publicado na Azure.
+# Uso: cd monitoring && docker compose up -d
+#   Prometheus: http://localhost:9090      Grafana: http://localhost:3000  (admin / admin)
+name: bairrovivo-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./metrics_token:/etc/prometheus/metrics_token:ro
+      - promdata:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"   # só localhost: painel admin nunca exposto à rede
+
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafdata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"   # só localhost
+    depends_on: [prometheus]
+
+volumes:
+  promdata:
+  grafdata:

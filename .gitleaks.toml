@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Arquivos de exemplo com valores de placeholder (não são segredos reais)"
+paths = [
+  '''\.env\.example''',
+  '''infra/terraform\.tfvars\.example''',
+]

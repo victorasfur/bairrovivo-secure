@@ -1,0 +1,43 @@
+#cloud-config
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+  - curl
+
+write_files:
+  # Segredos de runtime: existem só na VM (vieram do terraform.tfvars, fora do Git)
+  - path: /opt/bairrovivo/.env
+    permissions: "0600"
+    content: |
+      APP_IMAGE=${app_image}
+      APP_PORT=80
+      POSTGRES_USER=bairrovivo
+      POSTGRES_DB=bairrovivo
+      POSTGRES_PASSWORD=${postgres_password}
+      METRICS_TOKEN=${metrics_token}
+      DEMO_MODE=${demo_mode}
+
+  # Deploy por pull: baixa a imagem nova e recria só o que mudou
+  - path: /usr/local/bin/bairrovivo-update.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd /opt/bairrovivo/app
+      git pull --ff-only -q
+      C="docker compose --env-file /opt/bairrovivo/.env -f /opt/bairrovivo/app/docker-compose.yml"
+      $C pull -q app
+      $C up -d --no-build --remove-orphans
+
+  - path: /etc/cron.d/bairrovivo
+    permissions: "0644"
+    content: |
+      * * * * * root flock -n /var/lock/bairrovivo.lock /usr/local/bin/bairrovivo-update.sh >> /var/log/bairrovivo-update.log 2>&1
+
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker ${admin_username}
+  - git clone ${repo_url} /opt/bairrovivo/app
+  - /usr/local/bin/bairrovivo-update.sh || true

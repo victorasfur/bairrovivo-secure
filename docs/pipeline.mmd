@@ -1,0 +1,8 @@
+flowchart LR
+  A[git push] --> T["test<br/>ruff + pytest"]
+  A --> S["security<br/>Gitleaks · Semgrep"]
+  T --> B["build<br/>Docker + Trivy<br/>+ compose up/health"]
+  S --> B
+  B -->|só na main| P["publica imagem<br/>GHCR :latest + :sha"]
+  P --> D["deploy<br/>VM Azure puxa a imagem<br/>job confirma o SHA em /health"]
+  S -. falha .-> X(["❌ pipeline barrado"])
