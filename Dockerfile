@@ -11,8 +11,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     GIT_SHA=${GIT_SHA}
 
-# mantém o pip da imagem base atualizado (o Trivy também escaneia ele)
-RUN pip install --no-cache-dir --upgrade pip
+# Corrige CVEs da imagem base (o Trivy escaneia o SO e os pacotes Python embutidos):
+#  - apt upgrade: pega os patches de segurança do Debian (ex.: zlib1g)
+#  - pip atualizado; setuptools/wheel removidos (não são usados em runtime)
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip install --no-cache-dir --upgrade pip \
+ && pip uninstall -y setuptools wheel
 
 # usuário comum (UID fixo) -> o container nunca roda como root
 RUN groupadd --system --gid 10001 app \
