@@ -5,7 +5,7 @@ Este repositório é a entrega da disciplina **Secure DevOps Tools & Cloud Compu
 
 > ⚠️ **Dados 100% fictícios.** O MVP nasce com 40 ocorrências sintéticas (marcadas como "fictício" na tela). Não há fotos nem dados pessoais reais.
 
-**URL pública do MVP:** `http://<IP-DA-VM>` *(preencher após o deploy)*  ·  **Repositório:** `https://github.com/<usuario>/<repo>`
+**URL pública do MVP:** http://172.173.103.106  ·  **Repositório:** https://github.com/victorasfur/bairrovivo-secure
 
 ---
 
@@ -18,7 +18,7 @@ Este repositório é a entrega da disciplina **Secure DevOps Tools & Cloud Compu
 | Funcionalidades | Mapa + lista com filtros, registro de ocorrência, indicadores (total/abertas/resolvidas/categorias), API REST |
 | Stack | Python 3.12 · FastAPI · SQLAlchemy · PostgreSQL 16 · HTML/JS + Leaflet |
 | Container | Dockerfile multi-stage, usuário não-root, `read_only`, `cap_drop: ALL`, healthcheck |
-| IaC | Terraform (Azure): Resource Group, VNet, NSG, IP público, VM Ubuntu 24.04 |
+| IaC | Terraform (Azure, região `centralus`): Resource Group, VNet, NSG, IP público, VM Ubuntu 24.04 (Standard_D2s_v3) |
 | CI/CD | GitHub Actions: ruff + pytest → Gitleaks + Semgrep → build + Trivy + teste do compose → publica no GHCR → deploy |
 | Observabilidade | Prometheus + Grafana (4 métricas de ouro) + alertas; logs JSON; `/health` |
 | Segurança | Sem segredos no repo/imagem; segredos em GitHub Secrets e `.env` só na VM; SSH só do IP do admin; `/metrics` com token |
