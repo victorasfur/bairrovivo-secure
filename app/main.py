@@ -95,7 +95,8 @@ async def log_e_cabecalhos(request: Request, call_next):
         )
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "no-referrer"
+    # O OpenStreetMap exige o Referer (origem do site) para servir os tiles do mapa
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = CSP
     return response
 
