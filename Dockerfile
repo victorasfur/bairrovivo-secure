@@ -11,6 +11,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     GIT_SHA=${GIT_SHA}
 
+# mantém o pip da imagem base atualizado (o Trivy também escaneia ele)
+RUN pip install --no-cache-dir --upgrade pip
+
 # usuário comum (UID fixo) -> o container nunca roda como root
 RUN groupadd --system --gid 10001 app \
  && useradd  --system --uid 10001 --gid app --no-create-home app
