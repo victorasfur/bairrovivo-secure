@@ -13,4 +13,4 @@ scrape_configs:
       type: Bearer
       credentials_file: /etc/prometheus/metrics_token   # o mesmo METRICS_TOKEN da VM
     static_configs:
-      - targets: ["SEU_IP_PUBLICO_DA_VM:80"]   # <- TROQUE pelo IP (terraform output public_ip)
+      - targets: ["172.173.103.106:80"]   # <- TROQUE pelo IP (terraform output public_ip)
