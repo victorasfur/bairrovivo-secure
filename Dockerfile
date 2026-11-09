@@ -13,13 +13,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Corrige CVEs da imagem base (o Trivy escaneia o SO e os pacotes Python embutidos):
 #  - apt upgrade: pega os patches de segurança do Debian (ex.: zlib1g)
-#  - pip atualizado; setuptools/wheel removidos (não são usados em runtime), inclusive a
-#    cópia .whl embutida em ensurepip (CVE-2025-47273 no setuptools 70.3.0)
+#  - pip/setuptools/wheel removidos (não são usados em runtime; as dependências vêm do builder).
+#    O pip embute o pkg_resources do setuptools 70.3.0 (CVE-2025-47273), assim como a
+#    cópia .whl em ensurepip
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/* \
- && pip install --no-cache-dir --upgrade pip \
- && pip uninstall -y setuptools wheel \
+ && python -m pip uninstall -y pip setuptools wheel \
  && rm -f /usr/local/lib/python3.12/ensurepip/_bundled/setuptools-*.whl
 
 # usuário comum (UID fixo) -> o container nunca roda como root
